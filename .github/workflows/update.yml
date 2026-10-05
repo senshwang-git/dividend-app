@@ -46,6 +46,8 @@ jobs:
       - name: gh-pages 배포
         run: |
           cd site
+          # 배포마다 서비스 워커 버전을 바꿔 설치된 앱이 새 화면을 받도록 함
+          sed -i "s/const CACHE = \"dividend-[^\"]*\"/const CACHE = \"dividend-${GITHUB_SHA::7}-${GITHUB_RUN_NUMBER}\"/" sw.js
           git init -q -b gh-pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

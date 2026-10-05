@@ -1,5 +1,5 @@
 // 온라인이면 항상 최신 파일을 받아 쓰고(화면 수정이 바로 반영됨), 오프라인일 때만 저장해 둔 사본을 쓴다.
-const CACHE = "dividend-v2";
+const CACHE = "dividend-v3"; // 배포 워크플로가 매번 새 값으로 바꿔서, 설치된 앱이 새 버전을 받는다
 const SHELL = ["./", "index.html", "app.js", "engine.js", "charts.js", "accounts.js", "data.json", "manifest.webmanifest", "icon-192.png"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));

@@ -496,7 +496,18 @@ tr.sub td { background: var(--sunken); font-weight: 600; }
 
 <script type="module" src="app.js"></script>
 <script>
-if ("serviceWorker" in navigator && location.hostname.endsWith("github.io")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// 앱 업데이트: 새 버전(sw.js)이 배포되면 받아서 한 번 자동 새로고침, 앱으로 돌아올 때마다 확인
+if ("serviceWorker" in navigator && location.hostname.endsWith("github.io")) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").then((reg) => {
+    reg.update().catch(() => {});
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {}));
+}
 </script>
 </body>
 </html>
