@@ -62,7 +62,7 @@ const state = {
   divView: "year",
   fMarket: "",
   fSort: "yield",
-  fPopular: true,
+  fList: "rec",           // 종목 찾기 목록: rec 추천 · pop 인기 TOP30 · all 전체
   query: "",
 };
 const DRAFT = Object.keys(state).filter((k) => k !== "query" && k !== "tab");
@@ -97,7 +97,7 @@ function normalizeInputs(inp) {
   if (x.endYM === undefined) x.endYM = x.endYear ? `${x.endYear}-12` : null;
   if (x.projEndYM === undefined) x.projEndYM = null;
   if (x.wdMonthly === undefined) { x.wdMonthly = 0; x.wdMonthly2 = 0; x.wdSell = false; }
-  delete x.reinvestPct; delete x.reinvestPct2;
+  delete x.reinvestPct; delete x.reinvestPct2; delete x.fPopular;
   for (const k of ["holdings", "initial", "monthly", "startYear", "endYear", "years"]) delete x[k];
   return x;
 }
@@ -727,29 +727,37 @@ function renderHoldings() {
   tEl.innerHTML = `<span>비중 합계</span><b class="num">${total}%${total && Math.round(total) !== 100 ? " → 비율대로 환산" : ""}</b>`;
 }
 
+// 계좌별 추천 기준 (universe.json의 recommend)
+const REC_WHY = {
+  general: "일반 계좌 추천: 미국 배당 ETF·배당성장주처럼 국내 상장으로는 못 담는 종목과, 매달 꺼내 쓸 배당.",
+  isa: "ISA 추천: 분배금이 크거나 매매차익에 세금이 붙는 국내 상장 미국 ETF, 국내 고배당주처럼 오래 묵혀 재투자할 것.",
+  pension: "연금 추천: 55세 이후까지 묵힐 국내 상장 지수·배당성장 ETF.",
+};
+
 function renderPicks() {
   const q = state.query.trim().toLowerCase();
   const held = new Set(cur().holdings.map((h) => h.t));
   const market = state.acct === "general" ? state.fMarket : "";
   const list = Object.entries(DATA.tickers)
-    .filter(([t, d]) => !allowedIn(state.acct, d) && (!market || d.market === market) && (!state.fPopular || q || d.popular)
+    .filter(([t, d]) => !allowedIn(state.acct, d) && (!market || d.market === market) && (q || state.fList === "all" || (state.fList === "pop" ? d.popular : d.recommend?.includes(state.acct)))
       && (!q || t.toLowerCase().includes(q) || d.name.toLowerCase().includes(q)))
     .sort(([, a], [, b]) => state.fSort === "growth" ? (b.stats.growth5y ?? -9) - (a.stats.growth5y ?? -9) : b.stats.yield - a.stats.yield);
   $("picks").innerHTML = list.map(([t, d]) => {
     const on = held.has(t);
     const months = Array.from({ length: 12 }, (_, m) => `<i class="${d.stats.payMonths.includes(m + 1) ? "on" : ""}"></i>`).join("");
     return `<div class="pick">
-      <div class="who"><b>${esc(d.name)}${d.popular ? '<span class="pop">인기</span>' : ""}</b>
+      <div class="who"><b>${esc(d.name)}${d.recommend?.includes(state.acct) ? '<span class="pop rec">추천</span>' : ""}${d.popular ? '<span class="pop">인기</span>' : ""}</b>
         <div class="meta"><span>${esc(t.replace(".KS", ""))} · ${d.type}</span><span class="yield">${d.stats.dpsTTM > 0 ? pct(d.stats.yield) : "배당 기록 없음"}</span><span>${d.stats.freq}배당</span>
         ${d.stats.growth5y != null ? `<span>5년 성장 ${pct(d.stats.growth5y)}</span>` : ""}
         <span class="months" title="배당락 월">${months}</span></div>
       </div>
       <button class="add" type="button" data-pick="${esc(t)}" aria-pressed="${on}">${on ? "담김" : "담기"}</button>
     </div>`;
-  }).join("") || `<p class="empty">${state.fPopular && !q ? "인기 TOP30 중 이 계좌에 담을 수 있는 종목이 없습니다. 인기 TOP30 필터를 꺼 보세요." : "검색 결과가 없습니다."}</p>`;
+  }).join("") || `<p class="empty">${state.fList !== "all" && !q ? "이 목록에는 이 계좌에 담을 수 있는 종목이 없습니다. ‘전체’를 눌러 보세요." : "검색 결과가 없습니다."}</p>`;
   setSeg($("f-market"), state.fMarket);
   setSeg($("f-sort"), state.fSort);
-  $("f-popular").setAttribute("aria-pressed", String(state.fPopular));
+  setSeg($("f-list"), state.fList);
+  $("rec-why").textContent = state.fList === "rec" && !q ? `${REC_WHY[state.acct]} 투자 권유가 아니라 참고용입니다.` : "";
 }
 
 /* ---------- 내 설정 저장 · 불러오기 ---------- */
@@ -1144,7 +1152,7 @@ function bind() {
   $("search").addEventListener("input", (e) => { state.query = e.target.value; renderPicks(); });
   $("f-market").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { state.fMarket = b.dataset.v; renderPicks(); store.saveDraft(); } });
   $("f-sort").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { state.fSort = b.dataset.v; renderPicks(); store.saveDraft(); } });
-  $("f-popular").addEventListener("click", () => { state.fPopular = !state.fPopular; renderPicks(); store.saveDraft(); });
+  $("f-list").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { state.fList = b.dataset.v; renderPicks(); store.saveDraft(); } });
   $("picks").addEventListener("click", (e) => {
     const t = e.target.closest("[data-pick]")?.dataset.pick;
     if (!t) return;

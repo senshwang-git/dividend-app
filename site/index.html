@@ -205,6 +205,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; }
 .danger { border: 0; background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
 .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--muted); }
 .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.pop.rec { color: var(--s1); }
+.rec-why { margin: 0; }
 .pop { font-size: 10.5px; font-weight: 700; color: var(--accent); border: 1px solid currentColor; border-radius: 5px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
 .ym { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; }
 .acct-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -330,11 +332,14 @@ tr.sub td { background: var(--sunken); font-weight: 600; }
         <div class="seg" id="f-market">
           <button type="button" data-v="">전체</button><button type="button" data-v="KR">국내</button><button type="button" data-v="US">미국</button>
         </div>
-        <button type="button" class="chip" id="f-popular">인기 TOP30</button>
+        <div class="seg" id="f-list">
+          <button type="button" data-v="rec">추천</button><button type="button" data-v="pop">인기 TOP30</button><button type="button" data-v="all">전체</button>
+        </div>
         <div class="seg" id="f-sort">
           <button type="button" data-v="yield">수익률순</button><button type="button" data-v="growth">성장률순</button>
         </div>
       </div>
+      <p class="hint rec-why" id="rec-why"></p>
       <div class="pick-list" id="picks"></div>
       <p class="hint">수익률은 최근 12개월 배당 ÷ 현재가(세전). 막대 12칸은 1~12월 중 배당락이 있었던 달입니다.</p>
         </div>

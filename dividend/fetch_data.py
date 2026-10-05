@@ -137,6 +137,7 @@ def main():
             tickers[t] = {
                 **{k: item[k] for k in ("name", "market", "type", "sector", "lag")},
                 "popular": bool(item.get("popular")),
+                "recommend": item.get("recommend", []),
                 "currency": currency,
                 "offset": offset,
                 "price": price,
