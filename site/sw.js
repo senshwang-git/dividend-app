@@ -1,15 +1,20 @@
-const CACHE = "dividend-20261005123252";
-const SHELL = ["./", "index.html", "app.js", "engine.js", "charts.js", "accounts.js", "manifest.webmanifest", "icon-192.png"];
+// 온라인이면 항상 최신 파일을 받아 쓰고(화면 수정이 바로 반영됨), 오프라인일 때만 저장해 둔 사본을 쓴다.
+const CACHE = "dividend-v2";
+const SHELL = ["./", "index.html", "app.js", "engine.js", "charts.js", "accounts.js", "data.json", "manifest.webmanifest", "icon-192.png"];
+
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) => e.waitUntil(
   caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  if (url.pathname.endsWith("data.json")) {
-    e.respondWith(fetch(e.request).then((r) => { const c = r.clone(); caches.open(CACHE).then((x) => x.put(e.request, c)); return r; })
-      .catch(() => caches.match(e.request)));
-    return;
-  }
-  e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
+  e.respondWith(
+    fetch(e.request, { cache: "no-cache" })
+      .then((r) => {
+        if (r.ok) { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+        return r;
+      })
+      .catch(() => caches.match(e.request).then((hit) => hit || caches.match("index.html"))),
+  );
 });
