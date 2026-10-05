@@ -58,8 +58,28 @@ def to_monthly(hist):
     """
     period = hist.index.to_period("M")
     close = hist["Close"].groupby(period).last()
-    divs = hist["Dividends"].groupby(period).sum() if "Dividends" in hist else close * 0
+    divs = dividend_months(hist["Dividends"]) if "Dividends" in hist else {}
     return {p.strftime("%Y-%m"): (float(close[p]), float(divs.get(p, 0.0))) for p in close.index}
+
+
+def dividend_months(div):
+    """배당락일 → 배당 몫이 속한 달.
+
+    월배당 ETF(JEPI·JEPQ 등)는 1월분 배당락일을 12월 말로 당기는 일이 많아
+    그대로 묶으면 12월에 두 번, 1월에 0번이 된다. 한 달에 배당락이 두 번이고
+    다음 달에 하나도 없으면 늦은 쪽을 다음 달 몫으로 옮긴다.
+    """
+    events = [(d.to_period("M"), float(v)) for d, v in div[div > 0].items()]
+    raw = {}
+    for p, _ in events:
+        raw[p] = raw.get(p, 0) + 1
+    out, used = {}, set()
+    for p, v in events:
+        if p in used and raw.get(p + 1, 0) == 0 and (p + 1) not in used:
+            p = p + 1
+        used.add(p)
+        out[p] = out.get(p, 0.0) + v
+    return out
 
 
 def series_for(monthly, months):
