@@ -11,8 +11,8 @@ import { nf, man, won, manNum, pct, cssVar, esc, drawChart, legend } from "./cha
 
 // 새로고침 버튼이 실행하는 GitHub 저장소·워크플로
 const GH = {
-  server: "github", owner: "senshwang-git", repo: "briefing", ref: "main",
-  workflow: "dividend_data.yml", path: "docs/dividend/data.json",
+  server: "github", owner: "senshwang-git", repo: "dividend-app", ref: "main",
+  workflow: "update.yml", path: "site/data.json",
 };
 const DRAFT_KEY = "dividend-input-v3";
 const SAVED_KEY = "dividend-saved-v1";

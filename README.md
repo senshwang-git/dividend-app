@@ -7,10 +7,13 @@
 - 시세: Yahoo Finance, 평일 하루 두 번 자동 갱신 (`.github/workflows/update.yml`)
 - 저장: 설정·결과는 그 기기 브라우저에 저장됩니다. 저장함 탭의 **백업 파일 저장**으로 보관하세요.
 
-이 저장소는 `senshwang-git/briefing`의 `docs/dividend`에서 `dividend/build_app.py`로 만든 결과물입니다.
-화면을 고칠 때는 원본을 고친 뒤 다시 빌드합니다.
+이 저장소가 배당 통장의 원본입니다. `site/`를 고쳐 main에 푸시하면 바로 다시 배포됩니다(빌드 단계 없음).
+claude.ai에 고정한 배당 통장 아티팩트도 같은 `site/` 파일을 올린 것이며, 그 화면의 새로고침 버튼은 이 저장소의 `update.yml`을 실행합니다.
+
+로컬 확인: `cd site && python -m http.server` → http://localhost:8000
+테스트: `node --test dividend/*.test.mjs`
 
 | 폴더 | 내용 |
 |---|---|
 | `site/` | 배포되는 앱 (화면, 계산 엔진, 시세 data.json, manifest, 서비스 워커, 아이콘) |
-| `dividend/` | 종목 목록, 시세 수집 스크립트, 엔진 테스트 |
+| `dividend/` | 종목 목록(`universe.json`, 종목 추가는 여기서), 시세 수집 스크립트, 엔진 테스트 |

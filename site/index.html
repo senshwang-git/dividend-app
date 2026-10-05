@@ -491,7 +491,7 @@ tr.sub td { background: var(--sunken); font-weight: 600; }
 
 <script type="module" src="app.js"></script>
 <script>
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+if ("serviceWorker" in navigator && location.hostname.endsWith("github.io")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
 </body>
 </html>
