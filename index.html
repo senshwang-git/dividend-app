@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>배당 통장</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f6f52">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 레이아웃: 휴대폰 한 손 조작 — 상단 고정 요약 띠 + 탭 3개(결과/종목/설정) + 하단 탭 바. 숫자는 통장처럼 고정폭 */
+:root {
+  --bg: #f3f6f4;
+  --surface: #ffffff;
+  --sunken: #e9eeeb;
+  --ink: #15211c;
+  --muted: #5a6a62;
+  --line: #d8e0db;
+  --accent: #0f6f52;
+  --accent-ink: #ffffff;
+  --warn-bg: #fff3d6;
+  --warn-ink: #7a4b00;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #8a948f;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 12px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412; --surface: #161f1b; --sunken: #1d2823; --ink: #e6eee9; --muted: #92a49b;
+    --line: #2a3832; --accent: #43c194; --accent-ink: #06261a; --warn-bg: #3a2c0c; --warn-ink: #f4c76a;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #7d8a84;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --surface: #161f1b; --sunken: #1d2823; --ink: #e6eee9; --muted: #92a49b;
+  --line: #2a3832; --accent: #43c194; --accent-ink: #06261a; --warn-bg: #3a2c0c; --warn-ink: #f4c76a;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #7d8a84;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+.num, .tabnum { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 상단 요약 띠 */
+.strip {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--accent); color: var(--accent-ink);
+  padding: 10px 16px 12px;
+}
+.strip-in { max-width: 720px; margin: 0 auto; display: grid; gap: 4px; }
+.strip-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; opacity: .85; }
+.strip-top b { font-weight: 700; font-size: 13px; letter-spacing: .02em; opacity: 1; }
+.strip-figs { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
+.strip-figs div { min-width: 0; }
+.strip-figs small { display: block; font-size: 11px; opacity: .8; }
+.strip-figs .num { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+main { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 24px; }
+.panel { display: grid; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.card h2 { font-size: 15px; font-weight: 700; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: 12.5px; margin: 0; }
+.eyebrow { font-size: 11.5px; color: var(--muted); letter-spacing: .06em; }
+
+/* 결과: 헤드라인 */
+.hero { display: grid; gap: 6px; padding-block: 4px; }
+.hero .big { font-family: var(--font-num); font-size: clamp(30px, 9vw, 40px); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
+.hero .sub { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.hero .sub span b { color: var(--ink); font-weight: 600; }
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.kpi small { color: var(--muted); font-size: 12px; }
+.kpi .num { font-size: 19px; font-weight: 600; }
+.kpi em { font-style: normal; color: var(--muted); font-size: 11.5px; }
+.pill { display: inline-flex; gap: 6px; align-items: flex-start; background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.pill::before { content: "!"; font-weight: 700; font-family: var(--font-num); border: 1.5px solid currentColor; border-radius: 50%; width: 18px; height: 18px; flex: none; display: grid; place-items: center; font-size: 11px; margin-top: 1px; }
+
+/* 차트 */
+.chart { position: relative; width: 100%; min-height: 220px; touch-action: pan-y; }
+.chart svg { display: block; width: 100%; height: 220px; overflow: visible; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font: 10.5px var(--font-num); }
+.chart .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.tip {
+  position: absolute; top: 0; pointer-events: none; background: var(--ink); color: var(--bg);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.45; min-width: 140px; max-width: 220px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / .18); z-index: 2;
+}
+.tip b { display: block; font-family: var(--font-num); margin-bottom: 2px; }
+.tip .row { display: flex; justify-content: space-between; gap: 10px; }
+.tip .row span:last-child { font-family: var(--font-num); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend i.dash { height: 2px; border-radius: 0; vertical-align: 3px; background: transparent !important; border-top: 2px dashed var(--muted); }
+
+.seg { display: inline-flex; background: var(--sunken); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+
+/* 최근 12개월 입금 달력 */
+.cal { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cal div { border-radius: 8px; padding: 6px 4px; text-align: center; background: var(--sunken); min-width: 0; }
+.cal small { display: block; font-size: 11px; color: var(--muted); }
+.cal .num { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cal div.on { color: var(--ink); }
+
+/* 표 */
+.table-wrap { overflow-x: auto; margin-inline: -16px; padding-inline: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; white-space: nowrap; }
+th, td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+th:first-child, td:first-child { text-align: left; }
+td { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+td.name { font-family: var(--font-body); }
+tr.flag td { background: var(--warn-bg); color: var(--warn-ink); }
+td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; }
+
+/* 종목 */
+.holding { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding-block: 12px; border-bottom: 1px solid var(--line); }
+.holding:last-child { border-bottom: 0; }
+.holding .who { min-width: 0; }
+.holding .who b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.holding .who small { color: var(--muted); font-size: 12px; }
+.holding .ctrl { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 92px; gap: 10px; align-items: center; }
+.holding .ctrl .inp { padding-inline: 10px 8px; }
+.holding .amt { color: var(--muted); font-size: 12px; text-align: right; }
+.x { border: 0; background: var(--sunken); color: var(--muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1; }
+.total { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.total.bad b { color: var(--warn-ink); background: var(--warn-bg); border-radius: 6px; padding: 0 6px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.search { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.pick-list { display: grid; }
+.pick { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding-block: 10px; border-bottom: 1px solid var(--line); align-items: center; }
+.pick .who { min-width: 0; }
+.pick .who b { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick .meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; }
+.pick .meta .yield { color: var(--ink); font-family: var(--font-num); font-weight: 600; }
+.months { display: inline-grid; grid-template-columns: repeat(12, 5px); gap: 2px; vertical-align: middle; }
+.months i { width: 5px; height: 10px; border-radius: 1.5px; background: var(--line); }
+.months i.on { background: var(--accent); }
+.add { border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.add[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+
+/* 설정 */
+.field { display: grid; gap: 6px; }
+.field > label, .field > .lab { font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 8px; }
+.field output { font-family: var(--font-num); color: var(--accent); font-weight: 600; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inp { display: flex; align-items: center; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding-inline: 12px; min-width: 0; }
+.inp input, .inp select { border: 0; background: transparent; padding-block: 10px; width: 100%; min-width: 0; font-family: var(--font-num); outline: none; }
+.inp:focus-within { border-color: var(--accent); }
+.inp span { color: var(--muted); font-size: 13px; flex: none; padding-left: 6px; }
+select.inp { padding: 10px 12px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; }
+.check { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.sub-box { border-left: 2px solid var(--line); padding-left: 12px; display: grid; gap: 12px; }
+.wd-row { display: grid; grid-template-columns: 1fr 1.3fr auto; gap: 8px; align-items: center; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; padding-left: 16px; }
+
+/* 하단 탭 바 */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.tabs button { border: 0; background: transparent; padding: 8px 4px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; display: grid; justify-items: center; gap: 2px; }
+.tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.tabs button[aria-selected="true"] { color: var(--accent); background: var(--sunken); font-weight: 700; }
+.empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+.tabs { grid-template-columns: repeat(3, 1fr); }
+.refresh { border: 1px solid color-mix(in srgb, var(--accent-ink) 40%, transparent); background: transparent; color: inherit; border-radius: 999px; padding: 2px 10px; font: 500 12px var(--font-body); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.refresh svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+.refresh[aria-busy="true"] svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh[aria-busy="true"] svg { animation: none; } }
+.status { max-width: 720px; margin: 0 auto; font-size: 12.5px; padding: 8px 12px; border-radius: 10px; background: var(--sunken); color: var(--ink); display: flex; gap: 8px; justify-content: space-between; align-items: flex-start; }
+.status.err { background: var(--warn-bg); color: var(--warn-ink); }
+.status a { color: inherit; }
+.status button { border: 0; background: transparent; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.status-wrap { padding-inline: 16px; padding-block: 8px 0; }
+.primary { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 11px 16px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.primary:disabled { opacity: .5; cursor: default; }
+.danger { border: 0; background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.pop.rec { color: var(--s1); }
+.rec-why { margin: 0; }
+.pop { font-size: 10.5px; font-weight: 700; color: var(--accent); border: 1px solid currentColor; border-radius: 5px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+.ym { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; }
+.acct-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.acct-tabs button { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 6px; cursor: pointer; display: grid; gap: 2px; text-align: center; min-width: 0; }
+.acct-tabs b { font-size: 14px; }
+.acct-tabs small { font-size: 11px; color: var(--muted); font-family: var(--font-num); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-tabs button[aria-selected="true"] { border-color: var(--accent); background: var(--surface); box-shadow: inset 0 0 0 1px var(--accent); }
+.acct-tabs button[aria-selected="true"] b { color: var(--accent); }
+.acct-tabs button.off small { font-family: var(--font-body); }
+.acct-tag { font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 0 5px; margin-right: 6px; background: var(--sunken); color: var(--muted); }
+.add-stock { justify-self: start; border-style: dashed; color: var(--accent); font-weight: 600; }
+.picker { border-top: 1px solid var(--line); padding-top: 12px; }
+.fold { gap: 0; }
+.fold[open] { gap: 12px; }
+.fold summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); flex: none; margin-left: 4px; }
+.fold[open] summary::after { transform: rotate(-135deg); }
+.fold summary h2 { flex: none; }
+.fold summary .hint { flex: 1; text-align: right; min-width: 0; }
+.h3 { font-size: 14px; font-weight: 700; margin: 0; }
+.go { display: grid; gap: 8px; position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding-block: 8px; background: linear-gradient(to bottom, transparent, var(--bg) 30%); }
+.go .primary { width: 100%; padding-block: 14px; font-size: 15px; }
+.go .hint { text-align: center; }
+.run-summary { margin: 0; font-size: 13.5px; line-height: 1.6; }
+.preset-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+.wd-scroll { overflow: auto; max-height: 420px; margin-inline: -16px; padding-inline: 16px; }
+.wd-scroll th { position: sticky; top: 0; background: var(--surface); }
+.short { color: var(--warn-ink); font-size: 11px; }
+tr.sub td { background: var(--sunken); font-weight: 600; }
+.save-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.saved { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.saved-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.saved-top b { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-top small { color: var(--muted); font-size: 11.5px; flex: none; font-family: var(--font-num); }
+.saved-cond { color: var(--muted); font-size: 12.5px; margin: 0; }
+.saved-figs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.saved-figs div { min-width: 0; }
+.saved-figs small { display: block; color: var(--muted); font-size: 11px; }
+.saved-figs .num { font-size: 15px; font-weight: 600; }
+.saved-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.tickers { display: flex; flex-wrap: wrap; gap: 4px; }
+.tickers span { font-size: 11.5px; background: var(--sunken); border-radius: 6px; padding: 1px 6px; }
+.store-note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+@media (min-width: 720px) { .tabs { max-width: 720px; margin: 0 auto; border-inline: 1px solid var(--line); border-radius: 14px 14px 0 0; } }
+@media (prefers-reduced-motion: no-preference) { .card, .kpi { transition: border-color .2s; } }
+</style>
+</head>
+<body>
+<header class="strip" aria-live="polite">
+  <div class="strip-in">
+    <div class="strip-top"><b>배당 통장</b>
+      <button type="button" class="refresh" id="refresh" title="최신 시세로 새로고침"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span id="data-asof">데이터 불러오는 중</span></button>
+    </div>
+    <div class="strip-figs">
+      <div><small id="strip-l1">최종 잔액</small><span class="num" id="strip-balance">-</span></div>
+      <div><small id="strip-l2">월 배당(세후)</small><span class="num" id="strip-monthly">-</span></div>
+      <div><small id="strip-l3">누적 인출</small><span class="num" id="strip-withdrawn">-</span></div>
+    </div>
+  </div>
+</header>
+<div class="status-wrap" id="status-wrap" hidden><div class="status" id="status" role="status"><span id="status-text"></span><button type="button" id="status-close" aria-label="닫기">×</button></div></div>
+
+<main>
+  <!-- 입력: 금액 · 종목 · 기간 → 결과 보기 -->
+  <section class="panel" id="tab-input" role="tabpanel" aria-labelledby="t-input">
+    <div class="card">
+      <div class="card-head"><h2>내 설정</h2><span class="hint" id="preset-note"></span></div>
+      <div class="preset-row">
+        <div class="inp"><select id="preset-sel" aria-label="저장한 설정"></select></div>
+        <button class="btn" type="button" id="preset-load">불러오기</button>
+        <button class="btn" type="button" id="preset-del">삭제</button>
+      </div>
+      <form class="save-row" id="preset-form" novalidate>
+        <div class="inp"><input id="preset-name" type="text" maxlength="30" placeholder="지금 설정 이름 (같은 이름이면 덮어씀)" aria-label="설정 이름"></div>
+        <button class="primary" type="submit" id="preset-save">설정 저장</button>
+      </form>
+      <p class="hint" id="preset-msg" role="status"></p>
+      <p class="hint" id="preset-store" style="margin:0"></p>
+    </div>
+
+    <div class="card">
+      <h2>기간</h2>
+      <div class="seg" id="mode">
+        <button type="button" data-v="backtest">과거 실제 데이터</button><button type="button" data-v="projection">미래 예측</button>
+      </div>
+      <div class="field"><span class="lab">시작</span>
+        <div class="ym"><div class="inp"><select id="startY" aria-label="시작 연도"></select></div><div class="inp"><select id="startM" aria-label="시작 월"></select></div></div>
+      </div>
+      <div class="field"><span class="lab">끝</span>
+        <div class="ym"><div class="inp"><select id="endY" aria-label="끝 연도"></select></div><div class="inp"><select id="endM" aria-label="끝 월"></select></div></div>
+      </div>
+      <p class="hint" id="period-note"></p>
+      <div id="projection-box" class="panel" style="gap:12px">
+        <div class="field"><label for="fxAssume">환율 가정</label><div class="inp"><input id="fxAssume" type="number" inputmode="decimal" min="500" max="3000"><span>원/$</span></div></div>
+        <div class="row2">
+          <div class="field"><label for="priceGrowth">주가 상승률</label><div class="inp"><input id="priceGrowth" type="number" inputmode="decimal" step="0.5"><span>%/년</span></div></div>
+          <div class="field"><label for="divGrowth">배당 성장률</label><div class="inp"><input id="divGrowth" type="number" inputmode="decimal" step="0.5"><span>%/년</span></div></div>
+        </div>
+        <p class="hint">예측 모드는 종목별 최근 12개월 배당 패턴과 현재가에서 출발해 위 성장률을 모든 종목에 똑같이 적용합니다.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>계좌별 투자</h2><span class="hint" id="acct-total"></span></div>
+      <div class="acct-tabs" id="acct-tabs" role="tablist" aria-label="계좌"></div>
+      <label class="check"><input id="acct-on" type="checkbox"> <span id="acct-on-label">이 계좌 사용</span></label>
+      <div id="acct-body" class="panel" style="gap:12px">
+        <p class="hint" id="acct-rule"></p>
+        <div class="row2">
+          <div class="field"><label for="initial">처음 넣는 돈</label><div class="inp"><input id="initial" type="number" inputmode="numeric" min="0" step="100"><span>만원</span></div></div>
+          <div class="field"><label for="monthly">매달 추가 납입</label><div class="inp"><input id="monthly" type="number" inputmode="numeric" min="0" step="10"><span>만원</span></div></div>
+        </div>
+        <div id="acct-extra"></div>
+        <div class="card-head"><h3 class="h3">종목과 비중</h3><button class="btn" type="button" id="equalize">균등 배분</button></div>
+        <div id="holdings"></div>
+        <div class="total" id="weight-total"></div>
+        <button class="btn add-stock" type="button" id="picker-toggle" aria-expanded="false" aria-controls="picker">+ 종목 추가</button>
+        <div id="picker" class="panel picker" style="gap:10px" hidden>
+        <span class="hint" id="data-date"></span>
+      <input class="search" id="search" type="search" placeholder="종목명·티커 검색 (예: 삼성, SCHD)" autocomplete="off">
+      <div class="filters">
+        <div class="seg" id="f-market">
+          <button type="button" data-v="">전체</button><button type="button" data-v="KR">국내</button><button type="button" data-v="US">미국</button>
+        </div>
+        <div class="seg" id="f-list">
+          <button type="button" data-v="rec">추천</button><button type="button" data-v="pop">인기 TOP30</button><button type="button" data-v="all">전체</button>
+        </div>
+        <div class="seg" id="f-sort">
+          <button type="button" data-v="yield">수익률순</button><button type="button" data-v="growth">성장률순</button>
+        </div>
+      </div>
+      <p class="hint rec-why" id="rec-why"></p>
+      <div class="pick-list" id="picks"></div>
+      <p class="hint">수익률은 최근 12개월 배당 ÷ 현재가(세전). 막대 12칸은 1~12월 중 배당락이 있었던 달입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <details class="card fold" id="fold-div">
+      <summary><h2>배당금 처리 · 목돈 인출</h2><span class="hint" id="div-summary"></span></summary>
+      <div class="field">
+        <label for="wdMonthly">매달 인출액 <span class="hint">0이면 배당 전부 재투자</span></label>
+        <div class="inp"><input id="wdMonthly" type="number" inputmode="numeric" min="0" step="10"><span>만원</span></div>
+        <p class="hint">일반 계좌에 그 달 들어온 세후 배당에서 이 금액만큼 먼저 찾고, 남는 배당은 다시 삽니다. ISA·연금 계좌의 배당은 계좌 안에서 전부 재투자합니다.</p>
+      </div>
+      <label class="check"><input id="wdSell" type="checkbox"> 배당이 모자란 달엔 주식을 팔아 채우기</label>
+      <label class="check"><input id="switchOn" type="checkbox"> 중간에 인출액 바꾸기</label>
+      <div class="sub-box" id="switch-box">
+        <div class="row2">
+          <div class="field"><label for="switchYear">바꾸는 시점</label><div class="inp"><input id="switchYear" type="number" inputmode="numeric" min="1" max="40"><span>년 후</span></div></div>
+          <div class="field"><label for="wdMonthly2">그때부터 매달</label><div class="inp"><input id="wdMonthly2" type="number" inputmode="numeric" min="0" step="10"><span>만원</span></div></div>
+        </div>
+        <p class="hint">예: 매달 인출액 0, 10년 후부터 매달 100만원 → 10년 모은 뒤 생활비로 쓰기</p>
+      </div>
+      <div class="card-head" style="margin-top:4px"><h3 class="h3">목돈 인출</h3><button class="btn" type="button" id="wd-add">+ 인출 추가</button></div>
+      <p class="hint">일반 계좌에서 시작 후 N년차의 마지막 달에 보유 비중대로 팔아 원화로 찾습니다. 미국 종목 매매차익이 연 250만원을 넘으면 양도세 22%를 뗍니다.</p>
+      <div id="wd-list" class="panel" style="gap:8px"></div>
+    </details>
+
+    <details class="card fold">
+      <summary><h2>세금·환전</h2><span class="hint" id="tax-summary"></span></summary>
+      <div class="row2">
+        <div class="field"><label for="taxKR">국내 배당세</label><div class="inp"><input id="taxKR" type="number" inputmode="decimal" step="0.1" min="0" max="50"><span>%</span></div></div>
+        <div class="field"><label for="taxUS">미국 원천징수</label><div class="inp"><input id="taxUS" type="number" inputmode="decimal" step="0.1" min="0" max="50"><span>%</span></div></div>
+      </div>
+      <div class="field"><label for="fxSpread">환전 수수료</label><div class="inp"><input id="fxSpread" type="number" inputmode="decimal" step="0.05" min="0" max="5"><span>%</span></div></div>
+      <label class="check"><input id="fractionalUS" type="checkbox"> 미국 종목 소수점 매수</label>
+      <p class="hint">국내 배당세 15.4%(소득세 14% + 지방세 1.4%), 미국 배당은 현지에서 15% 원천징수되고 국내 추가 과세는 없습니다. 국내 상장 해외 ETF 분배금도 15.4%입니다. 국내 주식은 정수 주만 삽니다.</p>
+    </details>
+
+    <div class="go">
+      <p class="hint" id="go-hint"></p>
+      <button class="primary" type="button" id="run">결과 보기</button>
+    </div>
+  </section>
+
+  <!-- 결과 -->
+  <section class="panel" id="tab-result" role="tabpanel" aria-labelledby="t-result" hidden>
+    <div class="card run-head" id="run-head">
+      <div class="card-head"><span class="eyebrow" id="run-source">입력한 조건</span><button class="btn" type="button" id="edit-input">입력 수정</button></div>
+      <p class="run-summary" id="run-summary"></p>
+      <form class="save-row" id="save-form" novalidate>
+        <div class="inp"><input id="save-name" type="text" maxlength="40" placeholder="이름 (예: 월배당 1안)" aria-label="저장할 이름"></div>
+        <button class="primary" type="submit" id="save">결과 저장</button>
+      </form>
+      <p class="hint" id="save-msg" role="status"></p>
+    </div>
+    <div class="empty card" id="result-empty" hidden>입력 탭에서 금액·종목·기간을 정하고 ‘결과 보기’를 눌러 주세요.</div>
+    <div class="panel" id="result-body">
+    <div class="hero">
+      <span class="eyebrow" id="hero-label">최종 잔액</span>
+      <span class="big" id="hero-balance">-</span>
+      <div class="sub" id="hero-sub"></div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div id="warnings" class="panel" style="gap:8px"></div>
+
+    <div class="card" id="acct-card">
+      <div class="card-head"><h2>계좌별 결과</h2></div>
+      <div class="table-wrap"><table id="tb-acct"></table></div>
+      <div id="acct-notes" class="panel" style="gap:6px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>잔액 추이</h2></div>
+      <div class="legend" id="lg-balance"></div>
+      <div class="chart" id="ch-balance"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>배당 처리 방식 비교</h2></div>
+      <p class="hint">같은 조건에서 일반 계좌 배당을 내 설정대로 인출할 때, 전부 재투자할 때, 들어오는 대로 전부 찾을 때의 차이(ISA·연금은 항상 재투자). 선은 전체 잔액이며, 인출한 돈은 잔액에서 빠집니다.</p>
+      <div class="legend" id="lg-scen"></div>
+      <div class="chart" id="ch-scen"></div>
+      <div class="table-wrap"><table id="tb-scen"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>세후 배당 입금</h2>
+        <div class="seg" id="div-view">
+          <button type="button" data-v="year">연도별</button>
+          <button type="button" data-v="month">월별</button>
+        </div>
+      </div>
+      <div class="legend" id="lg-div"></div>
+      <div class="chart" id="ch-div"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>최근 12개월 입금 달력</h2></div>
+      <p class="hint">배당이 비는 달을 확인하고, 그 달에 지급하는 종목을 채워 넣어 보세요.</p>
+      <div class="cal" id="cal"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>연도별 통장 내역</h2></div>
+      <div class="table-wrap"><table id="tb-year"></table></div>
+      <p class="hint">단위 만원. 노란 줄은 세전 배당이 연 2,000만원을 넘어 금융소득종합과세 대상이 될 수 있는 해입니다(이자소득 등 다른 금융소득 제외).</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>월별 인출 내역</h2><span class="hint" id="wd-head"></span></div>
+      <div class="wd-scroll"><table id="tb-wd"></table></div>
+      <p class="hint" id="wd-foot"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>종목별 현황 (마지막 달)</h2></div>
+      <div class="table-wrap"><table id="tb-hold"></table></div>
+    </div>
+
+    <p class="note" id="assumptions"></p>
+    </div>
+  </section>
+
+  <!-- 저장함 -->
+  <section class="panel" id="tab-saved" role="tabpanel" aria-labelledby="t-saved" hidden>
+    <div class="card" id="compare-card" hidden>
+      <div class="card-head"><h2>저장한 결과 비교</h2></div>
+      <div class="table-wrap"><table id="compare"></table></div>
+    </div>
+    <div id="saved-list" class="panel" style="gap:10px"></div>
+    <p class="store-note" id="store-note"></p>
+    <div class="card" id="backup-card" hidden>
+      <div class="card-head"><h2>백업</h2></div>
+      <p class="hint">이 브라우저에만 저장되므로, 가끔 백업 파일로 저장해 두세요. 폰을 바꾸거나 다른 기기에서도 불러올 수 있습니다.</p>
+      <div class="saved-actions" style="justify-content:flex-start">
+        <button class="btn" type="button" id="backup-save">백업 파일 저장</button>
+        <label class="btn" for="backup-file" style="cursor:pointer">백업 불러오기</label>
+        <input id="backup-file" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p class="hint" id="backup-msg" role="status"></p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button type="button" role="tab" id="t-input" data-tab="input" aria-controls="tab-input">
+    <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>입력</button>
+  <button type="button" role="tab" id="t-result" data-tab="result" aria-controls="tab-result">
+    <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>결과</button>
+  <button type="button" role="tab" id="t-saved" data-tab="saved" aria-controls="tab-saved">
+    <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>저장함</button>
+</nav>
+
+<script type="module" src="app.js"></script>
+<script>
+// 앱 업데이트: 새 버전(sw.js)이 배포되면 받아서 한 번 자동 새로고침, 앱으로 돌아올 때마다 확인
+if ("serviceWorker" in navigator && location.hostname.endsWith("github.io")) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").then((reg) => {
+    reg.update().catch(() => {});
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {}));
+}
+</script>
+</body>
+</html>
