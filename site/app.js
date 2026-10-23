@@ -14,6 +14,7 @@ const GH = {
   server: "github", owner: "senshwang-git", repo: "dividend-app", ref: "main",
   workflow: "update.yml", path: "site/data.json",
 };
+const APP_URL = "https://senshwang-git.github.io/dividend-app/";
 const DRAFT_KEY = "dividend-input-v3";
 const SAVED_KEY = "dividend-saved-v1";
 const PRESET_KEY = "dividend-presets-v1";
@@ -304,6 +305,24 @@ async function refreshData() {
   } finally {
     refreshing = false;
     $("refresh").setAttribute("aria-busy", "false");
+  }
+}
+
+// 앱 주소 공유: 휴대폰은 공유 창(카톡·문자 등), 안 되면 클립보드 복사, 그것도 안 되면 주소를 보여 줌
+async function shareApp() {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "배당 통장", text: "국내·미국 배당주 계좌별 배당금·잔액 시뮬레이터", url: APP_URL });
+      return;
+    } catch (e) {
+      if (e?.name === "AbortError") return; // 사용자가 공유 창을 닫음
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(APP_URL);
+    showStatus(`앱 주소를 복사했습니다. 카톡·문자에 붙여 넣으세요. <span class="url">${APP_URL}</span>`, false, true);
+  } catch {
+    showStatus(`아래 주소를 길게 눌러 복사하세요. <span class="url">${APP_URL}</span>`, false, true);
   }
 }
 
@@ -1051,6 +1070,7 @@ function bind() {
     if (b) setTab(b.dataset.tab);
   });
   $("refresh").addEventListener("click", refreshData);
+  $("share").addEventListener("click", shareApp);
   $("status-close").addEventListener("click", () => ($("status-wrap").hidden = true));
   $("run").addEventListener("click", run);
   $("edit-input").addEventListener("click", () => (isStale() ? run() : setTab("input")));
